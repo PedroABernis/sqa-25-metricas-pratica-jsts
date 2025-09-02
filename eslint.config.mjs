@@ -3,6 +3,9 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 
 export default [
   {
+    ignores: ["src/__tests__/**"]
+  },
+  {
     files: ["src/**/*.ts", "src/__tests__/**/*.ts"],
     languageOptions: {
       parser: tsParser,
