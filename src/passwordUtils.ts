@@ -1,8 +1,5 @@
-export function validatePassword(password: any): boolean {
-  // TODO: remover console.log depois
-  console.log("Validando senha:", password);
-
-  const x: any = {
+export class PasswordUtils {
+  private static readonly OPTIONS = {
     minLength: 8,
     maxLength: 128,
     requireUppercase: true,
@@ -13,52 +10,81 @@ export function validatePassword(password: any): boolean {
     preventRepeating: true,
   };
 
-  const x1: string[] = [];
+  private static readonly SEQUENTIAL_PATTERNS = [
+    /123/,
+    /abc/,
+    /qwe/,
+    /asd/,
+    /zxc/,
+  ];
 
-  if (password.length < x.minLength) {
-    x1.push(`Senha deve ter pelo menos ${x.minLength} caracteres`);
+  public static validatePassword(password: string): boolean {
+    const violations: string[] = [];
+    const lowercasedPassword = password.toLowerCase();
+
+    this.checkLength(password, violations);
+    this.checkUppercase(password, violations);
+    this.checkLowercase(password, violations);
+    this.checkNumbers(password, violations);
+    this.checkSymbols(password, violations);
+    this.checkSequential(lowercasedPassword, violations);
+    this.checkRepeating(password, violations);
+
+    return violations.length === 0;
   }
 
-  if (x.maxLength && password.length > x.maxLength) {
-    x1.push(`Senha deve ter no máximo ${x.maxLength} caracteres`);
+  private static checkLength(password: string, violations: string[]): void {
+    if (password.length < this.OPTIONS.minLength) {
+      violations.push(`Senha deve ter pelo menos ${this.OPTIONS.minLength} caracteres`);
+    }
+
+    if (this.OPTIONS.maxLength && password.length > this.OPTIONS.maxLength) {
+      violations.push(`Senha deve ter no máximo ${this.OPTIONS.maxLength} caracteres`);
+    }
   }
 
-  if (x.requireUppercase && !/[A-Z]/.test(password)) {
-    x1.push("Senha deve conter pelo menos uma letra maiúscula");
+  private static checkUppercase(password: string, violations: string[]): void {
+    if (this.OPTIONS.requireUppercase && !/[A-Z]/.test(password)) {
+      violations.push("Senha deve conter pelo menos uma letra maiúscula");
+    }
   }
 
-  if (x.requireLowercase && !/[a-z]/.test(password)) {
-    x1.push("Senha deve conter pelo menos uma letra minúscula");
+  private static checkLowercase(password: string, violations: string[]): void {
+    if (this.OPTIONS.requireLowercase && !/[a-z]/.test(password)) {
+      violations.push("Senha deve conter pelo menos uma letra minúscula");
+    }
   }
 
-  if (x.requireNumbers && !/\d/.test(password)) {
-    x1.push("Senha deve conter pelo menos um número");
+  private static checkNumbers(password: string, violations: string[]): void {
+    if (this.OPTIONS.requireNumbers && !/\d/.test(password)) {
+      violations.push("Senha deve conter pelo menos um número");
+    }
   }
 
-  if (
-    x.requireSymbols &&
-    !/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
-  ) {
-    x1.push("Senha deve conter pelo menos um caractere especial");
+  private static checkSymbols(password: string, violations: string[]): void {
+    if (this.OPTIONS.requireSymbols && !/[!@#$%^&*()_+\-=[\]{};':"\\|,.<>\/?]/.test(password)) {
+      violations.push("Senha deve conter pelo menos um caractere especial");
+    }
   }
 
-  if (x.preventSequential) {
-    const temp: any = [/123/, /abc/, /qwe/, /asd/, /zxc/];
-
-    for (const pattern of temp) {
-      if (pattern.test(password.toLowerCase())) {
-        x1.push("Senha não deve conter sequências");
-        break;
+  private static checkSequential(password: string, violations: string[]): void {
+    if (this.OPTIONS.preventSequential) {
+      for (const pattern of this.SEQUENTIAL_PATTERNS) {
+        if (pattern.test(password)) {
+          violations.push("Senha não deve conter sequências comuns");
+          break;
+        }
       }
     }
   }
 
-  if (x.preventRepeating) {
-    if (/(.)\1{2,}/.test(password)) {
-      x1.push("Senha não deve ter caracteres repetidos em excesso");
+  private static checkRepeating(password: string, violations: string[]): void {
+    if (this.OPTIONS.preventRepeating) {
+      if (/(.)\1{2,}/.test(password)) {
+        violations.push("Senha não deve ter caracteres repetidos em excesso");
+      }
     }
   }
 
-  console.log("Violações encontradas:", x1.length);
-  return x1.length === 0;
+
 }

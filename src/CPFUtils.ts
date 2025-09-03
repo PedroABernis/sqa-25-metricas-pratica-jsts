@@ -1,119 +1,92 @@
 export class CPFUtils {
-  public static validateCPF(cpf: any): boolean {
-    // TODO: remover console.log depois
-    console.log("Validando CPF:", cpf);
+  private static readonly CONSTANTS = {
+    CPF_LENGTH: 11,
+    FIRST_DIGIT_POSITION: 9,
+    SECOND_DIGIT_POSITION: 10,
+    DIVISOR: 11,
+    FIRST_WEIGHTS_LENGTH: 9,
+    SECOND_WEIGHTS_LENGTH: 10,
+    FIRST_WEIGHTS_START: 10,
+    SECOND_WEIGHTS_START: 11,
+  };
 
-    const x = cpf.replace(/\D/g, "");
-    console.log("CPF limpo:", x);
+  private static readonly FIRST_DIGIT_WEIGHTS = this.generateFirstDigitWeights();
+  private static readonly SECOND_DIGIT_WEIGHTS = this.generateSecondDigitWeights();
 
-    if (x.length !== 11) {
+  public static validateCPF(cpf: string): boolean {
+    const cleaned = this.unmaskCPF(cpf);
+
+    if (cleaned.length !== this.CONSTANTS.CPF_LENGTH || this.hasAllSameDigits(cleaned)) {
       return false;
     }
 
-    if (/^(\d)\1{10}$/.test(x)) {
-      return false;
-    }
-
-    let temp = 0;
-    for (let i = 0; i < 9; i++) {
-      temp += parseInt(x.charAt(i)) * (10 - i);
-    }
-    let remainder = temp % 11;
-    let firstDigit = remainder < 2 ? 0 : 11 - remainder;
-    console.log("Primeiro dígito CPF:", firstDigit);
-
-    temp = 0;
-    for (let i = 0; i < 10; i++) {
-      temp += parseInt(x.charAt(i)) * (11 - i);
-    }
-    remainder = temp % 11;
-    let secondDigit = remainder < 2 ? 0 : 11 - remainder;
-    console.log("Segundo dígito CPF:", secondDigit);
+    const firstVerifierDigit = this.calculateVerifierDigit(cleaned.substring(0, 9), this.FIRST_DIGIT_WEIGHTS);
+    const secondVerifierDigit = this.calculateVerifierDigit(cleaned.substring(0, 10), this.SECOND_DIGIT_WEIGHTS);
 
     return (
-      parseInt(x.charAt(9)) === firstDigit &&
-      parseInt(x.charAt(10)) === secondDigit
+      parseInt(cleaned.charAt(this.CONSTANTS.FIRST_DIGIT_POSITION)) === firstVerifierDigit &&
+      parseInt(cleaned.charAt(this.CONSTANTS.SECOND_DIGIT_POSITION)) === secondVerifierDigit
     );
   }
 
-  public static maskCPF(cpf: any): string {
-    const x = cpf.replace(/\D/g, "");
-
-    if (x.length !== 11) {
-      throw new Error("CPF deve ter 11 dígitos");
-    }
-
-    let x1 = "";
-    for (let i = 0; i < x.length; i++) {
-      if (i === 3 || i === 6) {
-        x1 += ".";
-      } else if (i === 9) {
-        x1 += "-";
-      }
-      x1 += x.charAt(i);
-    }
-
-    return x1;
+  private static hasAllSameDigits(cpf: string): boolean {
+    return new RegExp(`^(\\d)\\1{${this.CONSTANTS.CPF_LENGTH - 1}}$`).test(cpf);
   }
 
-  public static unmaskCPF(cpf: any): string {
+  private static calculateVerifierDigit(
+    partialCPF: string,
+    weights: number[]
+  ): number {
+    const sum = weights.reduce(
+      (acc, weight, idx) => acc + parseInt(partialCPF.charAt(idx)) * weight,
+      0
+    );
+
+    const remainder = sum % this.CONSTANTS.DIVISOR;
+    return remainder < 2 ? 0 : this.CONSTANTS.DIVISOR - remainder;
+  }
+
+  private static generateFirstDigitWeights(): number[] {
+    return Array.from({ length: this.CONSTANTS.FIRST_WEIGHTS_LENGTH }, (_, i) => this.CONSTANTS.FIRST_WEIGHTS_START - i);
+  }
+
+  private static generateSecondDigitWeights(): number[] {
+    return Array.from({ length: this.CONSTANTS.SECOND_WEIGHTS_LENGTH }, (_, i) => this.CONSTANTS.SECOND_WEIGHTS_START - i);
+  }
+
+  public static maskCPF(cpf: string): string {
+    const cleaned = this.unmaskCPF(cpf);
+
+    if (cleaned.length !== this.CONSTANTS.CPF_LENGTH) {
+      throw new Error(`CPF must have ${this.CONSTANTS.CPF_LENGTH} digits`);
+    }
+
+    return cleaned.replace(/^(\d{3})(\d{3})(\d{3})(\d{2})$/, '$1.$2.$3-$4');
+  }
+
+  public static unmaskCPF(cpf: string): string {
     return cpf.replace(/\D/g, "");
   }
 
   public static generateValidCPF(): string {
-    const generateRandomDigits = (length: any): string => {
-      let x = "";
-      for (let i = 0; i < length; i++) {
-        x += Math.floor(Math.random() * 10).toString();
-      }
-      return x;
-    };
+    const partialCPF = this.generateRandomDigits(9);
 
-    const calculateVerifierDigit = (
-      partialCPF: any,
-      isFirstDigit: any
-    ): number => {
-      const weights: any = isFirstDigit
-        ? [10, 9, 8, 7, 6, 5, 4, 3, 2]
-        : [11, 10, 9, 8, 7, 6, 5, 4, 3, 2];
-      let temp = 0;
+    const firstDigit = this.calculateVerifierDigit(partialCPF, this.FIRST_DIGIT_WEIGHTS);
+    const secondDigit = this.calculateVerifierDigit(partialCPF + firstDigit, this.SECOND_DIGIT_WEIGHTS);
 
-      for (let i = 0; i < weights.length; i++) {
-        temp += parseInt(partialCPF.charAt(i)) * weights[i];
-      }
-
-      const remainder = temp % 11;
-      return remainder < 2 ? 0 : 11 - remainder;
-    };
-
-    let partialCPF = generateRandomDigits(9);
-    console.log("CPF parcial gerado:", partialCPF);
-
-    const firstDigit = calculateVerifierDigit(partialCPF, true);
-    partialCPF += firstDigit.toString();
-
-    const secondDigit = calculateVerifierDigit(partialCPF, false);
-    partialCPF += secondDigit.toString();
-
-    return partialCPF;
+    return partialCPF + firstDigit + secondDigit;
   }
 
-  public static isValidFormat(cpf: any): boolean {
-    const x = /^\d{3}\.\d{3}\.\d{3}-\d{2}$/;
-    if (x.test(cpf)) {
-      return true;
-    }
+  private static generateRandomDigits(length: number): string {
+    return Array.from({ length }, () => Math.floor(Math.random() * 10)).join("");
+  }
 
-    const x1 = /^\d{11}$/;
-    if (x1.test(cpf)) {
-      return true;
-    }
-
-    const temp = /^\d{0,3}(\.\d{0,3})?(\.\d{0,3})?(-\d{0,2})?$/;
-    if (temp.test(cpf)) {
-      return true;
-    }
-
-    return false;
+  public static isValidFormat(cpf: string): boolean {
+    const formats = [
+      /^\d{3}\.\d{3}\.\d{3}-\d{2}$/,
+      new RegExp(`^\\d{${this.CONSTANTS.CPF_LENGTH}}$`),
+      /^\d{0,3}(\.\d{0,3})?(\.\d{0,3})?(-\d{0,2})?$/,
+    ];
+    return formats.some((regex) => regex.test(cpf));
   }
 }
